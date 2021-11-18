@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Welcome to Vue</title>
+  <script src="https://unpkg.com/vue"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/2.0.3/fetch.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore.js"></script>
+</head>
+
+<template id="listTemplate">
+  <table>
+    <thead>
+      <tr>
+        <th>번호</th>
+        <th>이름</th>
+        <th>전화번호</th>
+        <th>주소</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="contact in contacts">
+        <td>{{contact.no}}</td>
+        <td>{{contact.name}}</td>
+        <td>{{contact.tel}}</td>
+        <td>{{contact.address}}</td>
+      </tr>
+    </tbody>
+  </table>
+</template>
+
+<template id="searchTemplate">
+  <p>
+    이름: <input type="text" v-model.trim="name" :placeholder="placeholder" @keyup.enter="keyupEvent">  <!--엔터키 keyup 이벤트 발생시 호출-->
+  </p>
+</template>
+
+<template id="searchContactTemplate">
+  <div>
+    <search-component placeholder="두 글자 이상 입력 후 엔터" v-on:search="searchEvent"></search-component>
+    <contactlist-component :contacts="contactlist"></contactlist-component>
+    <div v-show="isProcessing">조회 중...</div>
+  </div>
+</template>
+<body>
+  <div id="app">
+    <search-contact-component></search-contact-component>      
+  </div>
+
+  <script>
+    // 최상위 부모 컴포넌트
+    Vue.component('search-contact-component', {
+      template: "#searchContactTemplate",
+      data() {
+        return {
+          contactlist: [],
+          isProcessing: false
+        }
+      },
+      methods: {
+        searchEvent(name) {
+          if (name == '') this.contactlist = [];
+          else this.fetchContacts(name);
+        },
+        fetchContacts: _.debounce(function(name) {
+          this.contactlist = [];
+          this.isProcessing = true;
+          var url =  "http://sample.bmaster.kro.kr/contacts_long/search/" + name;
+          var vm = this;
+
+          fetch(url)
+            .then(response => 
+              response.json()
+            )
+            .then(json => {
+              vm.contactlist = json; // 컴포넌트 객체 안에서 새로 함수를 정의하기 시작하면, 그 안에서 this는 window가 된다. 
+              vm.isProcessing = false;
+            })
+            .catch(err => {
+              console.log('parsing failed', err);
+              vm.contactlist = [];
+              vm.isProcessing = false;
+            })
+            
+        }, 300) // debounce: 두번째 매개변수 범위 내에서는 1번 이상 요청 하지 않음 (ex: 300ms 간격)
+      }
+    })
+
+    // 부모 컴포넌트
+    Vue.component('search-component', {
+      template: "#searchTemplate",
+      props: ['placeholder'],
+      data() {
+        return {
+          name: ''
+        }
+      },
+      methods: {
+        keyupEvent: function(e) {
+          var val = e.target.value;
+          if (val.length >= 2) this.$emit('search', val); // 자식->부모에게 val을 전달
+          else this.$emit('search', '');
+        }
+      }
+    })
+
+    // 자식 컴포넌트
+    Vue.component('contactlist-component', {
+      template: "#listTemplate",
+      props: ['contacts']
+    });
+
+    var app = new Vue({
+      el: '#app'
+    })
+  </script>
+</body>
+</html>
