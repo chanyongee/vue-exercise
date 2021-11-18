@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To Do List</title>
+    <script src="https://unpkg.com/vue"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/2.0.3/fetch.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore.js"></script>
+    <style>
+        * {  box-sizing: border-box;  }
+        .header {
+            background-color: purple; padding: 30px 30px;
+            color: yellow; text-align: center;
+        }
+        .header:after {
+            content: ""; display: table; clear: both;
+        }
+        ul {  margin: 0; padding: 0; }
+        ul li { 
+            cursor: pointer; position: relative; padding: 8px 8px 8px 40px;
+            background: #eee; font-size: 14px;  transition: 0.2s;
+            -webkit-user-select: none; -moz-user-select: none;
+            -ms-user-select: none; user-select: none;  
+        }
+        ul li:hover {  background: #ddd;  }
+        ul li.checked {
+            background: #BBB;  color: #fff; text-decoration: line-through;
+        }
+        ul li.checked::before {
+            content: ''; position: absolute; border-color: #fff;
+            border-style: solid; border-width: 0px 1px 1px 0px; 
+            top: 10px; left: 16px;  transform: rotate(45deg);
+            height: 8px; width: 8px;
+        }
+        .close {
+            position: absolute; right: 0; top: 0;
+            padding: 12px 16px 12px 16px
+        }
+        .close:hover {
+            background-color: #f44336;  color: white;
+        }
+        .input {
+            border: none; width: 75%; height:35px; padding: 10px;
+            float: left; font-size: 16px;
+        }
+        .addbutton {
+            padding: 10px; width: 25%; height:35px; background: #d9d9d9; 
+            color: #555; float: left; text-align: center;
+            font-size: 13px; cursor: pointer; transition: 0.3s;
+        }
+        .addbutton:hover { background-color: #bbb; }
+    </style>
+</head>
+
+<template id="listTemplate">
+    <ul id="list-template">
+        <li v-for="(a, index) in todolist" :class="checked(a.done)" @click="doneToggle(index)">
+            <span>{{a.todo}}</span>
+            <span v-if="a.done"> (완료)</span>
+            <span class="close" @click.stop="deleteTodo(index)">&#x00D7;</span>
+        </li>
+    </ul>
+</template>
+<template></template>
+
+<template id="inputTemplate">
+    <div>
+        <input type="text" class="input" id="task" v-model.trim="todo" placeholder="입력 후 엔터" @keyup.enter="addTodo">
+        <span class="addButton" @click="addTodo">추 가</span>
+    </div>
+</template>
+
+<body>
+    <div id="app">
+        <div id="header" class="header">
+            <h2>Todo List App</h2>
+            <input-component></input-component>
+        </div> 
+        <list-component></list-component>
+    </div>    
+
+</body>
+
+<script>
+    var eventBus = new Vue(); // 이벤트버스 객체. 별도의 데이터 정보를 가지지 않고, 순수하게 이벤트를 통해서 컴토넌트 간의 정보 교환만을 위해 사용함
+
+    Vue.component('list-component', {
+        template: "#listTemplate",
+        created() {
+            eventBus.$on('add-todo', this.addTodo); // 여기서는 형제끼리의 이벤트 전달과는 관계없지만, eventbus가 모든 이벤트를 관리하게 만들기 위해 등록함
+        },
+        data() {
+            return {
+                todolist: [
+                    { todo: 'ES6 공부하기', done: false },
+                    { todo: 'Vue 예제 연습', done: false },
+                    { todo: '해커랭크 문제풀기', done: false },
+                    { todo: '자기소개서 작성', done: false}
+                ]
+            }
+        },
+        methods: {
+            checked(done) {
+                if (done) return { checked: true }; // 객체를 리턴하면 클래스를 동적으로 결정할 수 있음
+                else return { checked: false };
+            },
+            addTodo(todo) {
+                if (todo !== '') {
+                    this.todolist.push({ todo: todo, done: false}); // 리스트 data는 list component가 관리하고 있으므로, 여기서 push 이벤트를 작성해야 함
+                }
+            },
+            doneToggle(index) {
+                this.todolist[index].done = !this.todolist[index].done;
+            },
+            deleteTodo(index) {
+                this.todolist.splice(index, 1);
+            }
+        }
+    })
+
+    Vue.component('input-component', {
+        template: "#inputTemplate",
+        data() {
+            return {
+                todo: ''
+            }
+        },
+        methods: {
+            addTodo() {
+                eventBus.$emit('add-todo', this.todo);  // input data는 input component가 관리하고 있으므로, 여기서 input 엔터 이벤트를 발생시킴
+                this.todo = ''; // 초기화
+            }
+        }
+    })
+    var vm = new Vue({
+        el: "#app"
+    })
+</script>
+</html>
